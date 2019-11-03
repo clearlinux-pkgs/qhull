@@ -4,7 +4,7 @@
 #
 Name     : qhull
 Version  : 7.2.1
-Release  : 1
+Release  : 2
 URL      : https://github.com/qhull/qhull/archive/v7.2.1.tar.gz
 Source0  : https://github.com/qhull/qhull/archive/v7.2.1.tar.gz
 Summary  : A general dimension code for computing convex hulls and related structures
