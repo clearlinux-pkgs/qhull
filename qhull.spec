@@ -4,10 +4,10 @@
 #
 Name     : qhull
 Version  : 7.2.1
-Release  : 2
+Release  : 3
 URL      : https://github.com/qhull/qhull/archive/v7.2.1.tar.gz
 Source0  : https://github.com/qhull/qhull/archive/v7.2.1.tar.gz
-Summary  : A general dimension code for computing convex hulls and related structures
+Summary  : Reentrant library for convex hull, Delaunay triangulation, Voronoi diagram, and halfspace intersection about a point
 Group    : Development/Tools
 License  : Qhull
 Requires: qhull-bin = %{version}-%{release}
@@ -41,7 +41,6 @@ Group: Development
 Requires: qhull-lib = %{version}-%{release}
 Requires: qhull-bin = %{version}-%{release}
 Provides: qhull-devel = %{version}-%{release}
-Requires: qhull = %{version}-%{release}
 Requires: qhull = %{version}-%{release}
 
 %description dev
@@ -84,35 +83,62 @@ man components for the qhull package.
 
 %prep
 %setup -q -n qhull-7.2.1
+cd %{_builddir}/qhull-7.2.1
 
 %build
 export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
-export LANG=C
-export SOURCE_DATE_EPOCH=1558942387
+export LANG=C.UTF-8
+export SOURCE_DATE_EPOCH=1604604872
 mkdir -p clr-build
 pushd clr-build
-export CFLAGS="$CFLAGS -fno-lto "
-export FCFLAGS="$CFLAGS -fno-lto "
-export FFLAGS="$CFLAGS -fno-lto "
-export CXXFLAGS="$CXXFLAGS -fno-lto "
+export GCC_IGNORE_WERROR=1
+export AR=gcc-ar
+export RANLIB=gcc-ranlib
+export NM=gcc-nm
+export CFLAGS="$CFLAGS -O3 -falign-functions=32 -ffat-lto-objects -flto=4 -fno-math-errno -fno-semantic-interposition -fno-trapping-math "
+export FCFLAGS="$FFLAGS -O3 -falign-functions=32 -ffat-lto-objects -flto=4 -fno-math-errno -fno-semantic-interposition -fno-trapping-math "
+export FFLAGS="$FFLAGS -O3 -falign-functions=32 -ffat-lto-objects -flto=4 -fno-math-errno -fno-semantic-interposition -fno-trapping-math "
+export CXXFLAGS="$CXXFLAGS -O3 -falign-functions=32 -ffat-lto-objects -flto=4 -fno-math-errno -fno-semantic-interposition -fno-trapping-math "
+%cmake ..
+make  %{?_smp_mflags}
+popd
+mkdir -p clr-build-avx2
+pushd clr-build-avx2
+export GCC_IGNORE_WERROR=1
+export AR=gcc-ar
+export RANLIB=gcc-ranlib
+export NM=gcc-nm
+export CFLAGS="$CFLAGS -O3 -falign-functions=32 -ffat-lto-objects -flto=4 -fno-math-errno -fno-semantic-interposition -fno-trapping-math -march=haswell "
+export FCFLAGS="$FFLAGS -O3 -falign-functions=32 -ffat-lto-objects -flto=4 -fno-math-errno -fno-semantic-interposition -fno-trapping-math -march=haswell "
+export FFLAGS="$FFLAGS -O3 -falign-functions=32 -ffat-lto-objects -flto=4 -fno-math-errno -fno-semantic-interposition -fno-trapping-math -march=haswell "
+export CXXFLAGS="$CXXFLAGS -O3 -falign-functions=32 -ffat-lto-objects -flto=4 -fno-math-errno -fno-semantic-interposition -fno-trapping-math -march=haswell "
+export CFLAGS="$CFLAGS -march=haswell -m64"
+export CXXFLAGS="$CXXFLAGS -march=haswell -m64"
+export FFLAGS="$FFLAGS -march=haswell -m64"
+export FCFLAGS="$FCFLAGS -march=haswell -m64"
 %cmake ..
 make  %{?_smp_mflags}
 popd
 
 %check
-export LANG=C
+export LANG=C.UTF-8
 export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
 cd clr-build; make test
+cd ../clr-build-avx2;
+make test || :
 
 %install
-export SOURCE_DATE_EPOCH=1558942387
+export SOURCE_DATE_EPOCH=1604604872
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/package-licenses/qhull
-cp COPYING.txt %{buildroot}/usr/share/package-licenses/qhull/COPYING.txt
+cp %{_builddir}/qhull-7.2.1/COPYING.txt %{buildroot}/usr/share/package-licenses/qhull/b92790f132c454fef32219a5a3eda4211e8250ff
+pushd clr-build-avx2
+%make_install_avx2  || :
+popd
 pushd clr-build
 %make_install
 popd
@@ -122,6 +148,12 @@ popd
 
 %files bin
 %defattr(-,root,root,-)
+/usr/bin/haswell/qconvex
+/usr/bin/haswell/qdelaunay
+/usr/bin/haswell/qhalf
+/usr/bin/haswell/qhull
+/usr/bin/haswell/qvoronoi
+/usr/bin/haswell/rbox
 /usr/bin/qconvex
 /usr/bin/qdelaunay
 /usr/bin/qhalf
@@ -201,6 +233,9 @@ popd
 /usr/include/libqhullcpp/RoadLogEvent.h
 /usr/include/libqhullcpp/RoadTest.h
 /usr/include/libqhullcpp/functionObjects.h
+/usr/lib64/haswell/libqhull.so
+/usr/lib64/haswell/libqhull_p.so
+/usr/lib64/haswell/libqhull_r.so
 /usr/lib64/libqhull.so
 /usr/lib64/libqhull_p.so
 /usr/lib64/libqhull_r.so
@@ -211,6 +246,12 @@ popd
 
 %files lib
 %defattr(-,root,root,-)
+/usr/lib64/haswell/libqhull.so.7
+/usr/lib64/haswell/libqhull.so.7.2.0
+/usr/lib64/haswell/libqhull_p.so.7
+/usr/lib64/haswell/libqhull_p.so.7.2.0
+/usr/lib64/haswell/libqhull_r.so.7
+/usr/lib64/haswell/libqhull_r.so.7.2.0
 /usr/lib64/libqhull.so.7
 /usr/lib64/libqhull.so.7.2.0
 /usr/lib64/libqhull_p.so.7
@@ -220,7 +261,7 @@ popd
 
 %files license
 %defattr(0644,root,root,0755)
-/usr/share/package-licenses/qhull/COPYING.txt
+/usr/share/package-licenses/qhull/b92790f132c454fef32219a5a3eda4211e8250ff
 
 %files man
 %defattr(0644,root,root,0755)
